@@ -1,7 +1,7 @@
 # SDevo
 
 
-SDevo is a [BEAST2](http://beast2.org) package that implementes the multi-type birth death process with state dependent rates of evolution. It provides the BEAST2 code for the manuscript **State-dependent evolutionary models reveal modes of solid tumor growth** by Lewinsohn et al. 
+SDevo is a [BEAST2](http://beast2.org) package that implementes the multi-type birth death process with state dependent rates of evolution. It provides the BEAST2 code for the manuscript **State-dependent evolutionary models reveal modes of solid tumor growth** by Lewinsohn et al. The material for this manuscript can be found [here](https://github.com/blab/spatial-tumor-phylodynamics).
 
 Upon publication, SDevo will become a regular BEAST2 package downloadable through the BEAUti interface.
 In the meantime, we provided a compile BEAST2 jar file for SDevo [here](https://github.com/blab/spatial-tumor-phylodynamics/blob/main/SDevo.jar).
