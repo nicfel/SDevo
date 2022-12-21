@@ -203,6 +203,8 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
         for (int type=0; type<param.getNTypes(); type++)
         	startTypeProbs[type]/=sum;
         
+//        System.out.println(Arrays.toString(startTypeProbs));
+        
         
    		boolean worked = forwardSimulateSubtree(untypedTree.getRoot(), 0.0, startTypeProbs);
    		   		   		
@@ -568,11 +570,14 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
     	
     	double totProb = 0.0;
     	
+//    	System.out.println(Arrays.toString(startTypeProbs));
+    	
         
     	// normalize
     	for (int a = 0 ; a < param.getNTypes(); a++) {
         	totProb+=startTypeProbs[a];
         }        
+    	
         for (int a = 0 ; a < param.getNTypes(); a++) {
         	startTypeProbs[a] /= totProb;
         }
@@ -593,9 +598,12 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
         
         for (int currentType = 0 ; currentType < param.getNTypes(); currentType++) {
         	totalRate[currentType] = getTotalFowardsRate(currentType, currentTime, subtreeRoot, rates[currentType]);
+        	
         }
 
         double tottime = 0;
+        
+        boolean first = true;
 
         int integrationStep;
         for (integrationStep=0; integrationStep< FORWARD_INTEGRATION_STEPS; integrationStep++) {
@@ -608,19 +616,21 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
             
             
             for (int a = 0; a < param.getNTypes(); a++) {            		
-            	double avg = (totalRate[a] + totalRatePrime[a]);  	
+            	double avg = (totalRate[a] + totalRatePrime[a])/2;  
             	            	
-            	double totOutflow = startTypeProbs[a]*(1-Math.exp(-dt*avg/2));
+            	double totOutflow = startTypeProbs[a]*dt*avg;
             	
 
             	
-//            	totOutflow = Math.min(startTypeProbs[a], totOutflow);
+
+            	
+            	totOutflow = Math.min(startTypeProbs[a], totOutflow);
             	
                 if (avg>10e-10) {
 	            	startTypeProbsPrime[a] -= totOutflow;
 	            	for (int b = 0; b < param.getNTypes(); b++) {
 	            		if (a!=b) {
-	            			startTypeProbsPrime[b] += totOutflow * (rates[a][b] + ratesPrime[a][b])/avg;
+	            			startTypeProbsPrime[b] += totOutflow * (rates[a][b] + ratesPrime[a][b])/avg/2;
 	            		}                			
 	            	}
             	}else{
@@ -654,25 +664,20 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
         if (!subtreeRoot.isRoot()) {
         
 	        if (Math.abs(tottime - (nodeTime[subtreeRoot.getNr()*param.getNTypes()+0] +nodeTime[subtreeRoot.getNr()*param.getNTypes()+1]))>10e-4)
-	        	System.exit(0);
+	        	return false;
 	        if (Math.abs(tottime - (subtreeRoot.getParent().getHeight()- subtreeRoot.getHeight()))>10e-4)
-	        	System.exit(0);
+	        	return false;
         }
         
         if (Double.isNaN(nodeTime[subtreeRoot.getNr()*param.getNTypes()+0]) || Double.isNaN(nodeTime[subtreeRoot.getNr()*param.getNTypes()+1])) {
         	return false;
-//        	System.out.println(Arrays.toString(startTypeProbs));
-//        	System.out.println(subtreeRoot);
-//        	System.exit(0);
         }
         if (Double.isNaN(nodeTime[subtreeRoot.getNr()*param.getNTypes()+1])) {
         	return false;
-//        	System.out.println(Arrays.toString(startTypeProbs));
-//        	System.exit(0);
         }
 
         
-        
+
 
         int currentType = 0;
         switch(getNodeKind(subtreeRoot)) {
@@ -685,6 +690,19 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
 
             case INTERNAL:
                 double[][] childTypes = sampleChildTypes(subtreeRoot, startTypeProbs);
+//                System.out.println(Arrays.toString(childTypes[0]));
+//                System.out.println(Arrays.toString(childTypes[1]));
+
+                for (int i = 0; i < param.getNTypes(); i++) { 
+	                childTypes[0][i] = startTypeProbs[i];
+	        		childTypes[1][i] = startTypeProbs[i];
+                }
+//                System.out.println(Arrays.toString(childTypes[0]));
+//                System.out.println(Arrays.toString(childTypes[1]));
+
+
+//            	System.exit(0);
+
 //                System.out.println(Arrays.toString(childTypes[0]) + " " + Arrays.toString(childTypes[1]));
 //                System.out.println(Arrays.toString(childTypes[1]));
                 forwardSimulateSubtree(subtreeRoot.getChild(0), endTime, childTypes[0]);
@@ -853,12 +871,7 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
      */
     private double[] getForwardsRates(int fromType, double time, Node baseNode, double[] result) {
         double[] y = getBackwardsIntegrationResult(baseNode, time);
-        
-//        for (int i = 0; i < y.length; i++)
-//        	if (y[i]<1e-80)
-//        		y[i] = 0;
-//        
-//        
+
         int interval = param.getIntervalIndex(time);
 
         for (int type=0; type<param.getNTypes(); type++) {
@@ -870,10 +883,7 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
             result[type] = (param.getCrossBirthRates()[interval][fromType][type] * y[type]
                         + param.getMigRates()[interval][fromType][type])
                         * y[param.getNTypes() + type];
-
         }
-        
-        
 
         if (y[param.getNTypes()+fromType]<=0.0) {
             // The source type prob approaches zero as the integration closes
@@ -889,9 +899,10 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
                     maxRate = result[type];
                 }
             }
-            if (maxRate!=0)
-	            for (int type=0; type<param.getNTypes(); type++)
-	                result[type] = type == maxRateIdx ? 1e10 : 0.0 ;
+
+            for (int type=0; type<param.getNTypes(); type++)
+                result[type] = type == maxRateIdx ? 1e10 : 0.0 ;
+
         } else {
             // Apply source type prob as rate denominator:
 
@@ -899,7 +910,6 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
                 result[type] /= y[param.getNTypes()+fromType];
 
         }
-
 
         return result;
     }
