@@ -23,7 +23,7 @@ public class TestMapping {
         String newick = "((t1[&state=0] : 1.5, t2[&state=1] : 0.5):0.5, t3[&state=1]:2);";
         
 
-		RealParameter originParam = new RealParameter("2.5");
+		RealParameter originParam = new RealParameter("3.75");
 
 		Parameterization parameterization = new CanonicalParameterization();
 		parameterization.initByName(
@@ -48,19 +48,16 @@ public class TestMapping {
                         null,
                         new RealParameter("1.0"), 2));
     	    	
-		double diff = getDiffMapping(parameterization, newick);
+		double diff = getDiffMapping(parameterization, newick, 4);
 		
-        System.out.println(diff);
-
 		
-        Assert.assertEquals(diff, 0, 0.1);
-		
+        Assert.assertEquals(diff, 0, 0.1);		
 		
 		
         String newick2 = "((t1[&state=0] : 1.5, t2[&state=1] : 0.5):0.5, t3[&state=1]:2);";
         
 
-		RealParameter originParam2 = new RealParameter("2.5");
+		RealParameter originParam2 = new RealParameter("4.5");
 
 		Parameterization parameterization2 = new CanonicalParameterization();
 		parameterization2.initByName(
@@ -85,18 +82,16 @@ public class TestMapping {
                         null,
                         new RealParameter("1.0"), 2));
 		
-		double diff2 = getDiffMapping(parameterization2, newick2);
+		double diff2 = getDiffMapping(parameterization2, newick2, 4);
 		
         Assert.assertEquals(diff2, 0, 0.1);
-        
-        System.out.println(diff2);
         
         
         
         String newick3 = "((t1[&state=1] : 1.5, t2[&state=1] : 0.5):0.5, t3[&state=1]:2);";
         
 
-		RealParameter originParam3 = new RealParameter("2.5");
+		RealParameter originParam3 = new RealParameter("3.5");
 
 		Parameterization parameterization3 = new CanonicalParameterization();
 		parameterization3.initByName(
@@ -121,20 +116,53 @@ public class TestMapping {
                         null,
                         new RealParameter("1.0"), 2));
 		
-		double diff3 = getDiffMapping(parameterization3, newick3);
+		double diff3 = getDiffMapping(parameterization3, newick3, 4);
 		
-		
-        System.out.println(diff3);
-
 		
         Assert.assertEquals(diff3, 0, 0.1);
+        
+        
+        
+        String newick4 = "((t1[&state=1] : 1.5, t2[&state=1] : 0.5):0.5, (t3[&state=1]:2, t4[&state=0]:0.5):1);";
+        
 
+		RealParameter originParam4 = new RealParameter("5.5");
 
+		Parameterization parameterization4 = new CanonicalParameterization();
+		parameterization4.initByName(
+		        "typeSet", new TypeSet(2),
+                "origin", originParam4,
+                "birthRate", new SkylineVectorParameter(
+                        null,
+                        new RealParameter("0.1 1"), 2),
+                "deathRate", new SkylineVectorParameter(
+                        null,
+                        new RealParameter("1.0"), 2),
+                "birthRateAmongDemes", new SkylineMatrixParameter(
+                        null,
+                        new RealParameter("0.0"), 2),
+                "migrationRate", new SkylineMatrixParameter(
+                        null,
+                        new RealParameter("0.1 0.50"), 2),
+                "samplingRate", new SkylineVectorParameter(
+                        null,
+                        new RealParameter("0.1 0.1"), 2),
+                "removalProb", new SkylineVectorParameter(
+                        null,
+                        new RealParameter("1.0"), 2));
+		
+		double diff4 = getDiffMapping(parameterization4, newick4, 6);
+		
+        Assert.assertEquals(diff4, 0, 0.1);
+        
+        Assert.assertEquals(getDiffMapping(parameterization3, newick4, 6), 0.,0.1);
+        Assert.assertEquals(getDiffMapping(parameterization2, newick4, 6), 0.,0.1);
+        Assert.assertEquals(getDiffMapping(parameterization, newick4, 6), 0.,0.1);
 
     }
     
     
-    private double getDiffMapping(Parameterization parameterization, String newick) {
+    private double getDiffMapping(Parameterization parameterization, String newick, int nrnodes) {
     	FlatTypeMappedTree avgTypedTree = new FlatTypeMappedTree();
     	
     	avgTypedTree.initByName(
@@ -150,7 +178,7 @@ public class TestMapping {
     	avgTypedTree.doStochasticMapping();
     	
     	int states=2;
-    	int reps=10000;
+    	int reps=100000;
     	double[] totalLength = new double[states];
     	
         TypeMappedTree typeMappedTree = new TypeMappedTree();
@@ -164,7 +192,7 @@ public class TestMapping {
                             false, false,
                             true,0),
                     "typeLabel", "state");
-
+            
             double[] newLength = getStateLength(typeMappedTree.getRoot(),states);
     		
     		
@@ -179,9 +207,15 @@ public class TestMapping {
     	
     	double diff = 0;
 		for (int j = 0; j < states; j++) {
-			diff += Math.abs(totalLength[j]/reps-(avgTypedTree.getNodeTime(0, j) + avgTypedTree.getNodeTime(1, j)+ avgTypedTree.getNodeTime(2, j)+ avgTypedTree.getNodeTime(3, j)));
+			double nodediff = totalLength[j]/reps;
+			for (int i= 0; i < nrnodes; i++) {
+				nodediff-= avgTypedTree.getNodeTime(i, j);
+			}
+			
+			diff += Math.abs(nodediff);
 			
 		}
+		System.out.println(diff);
 		return diff;
     }
 

@@ -1,0 +1,7 @@
+<packages>
+    <package name="SDevo" version="0.0.1" url="https://github.com/tgvaughan/SDevo/releases/download/v0.0.1/SDevo.v0.0.1.zip" projectURL="https://github.com/nicfel/SDevo" description="State dependent Birth-death Migration Model">
+        <depends on="beast2" atleast="2.6.0" atmost="2.6.9"/>
+        <depends on="SA" atleast="2.0.2"/>
+        <depends on="BDMM-Prime" atleast="0.0.30"/>
+    </package>
+</packages>
