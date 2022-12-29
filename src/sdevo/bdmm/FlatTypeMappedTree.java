@@ -73,8 +73,7 @@ public class FlatTypeMappedTree extends CalculationNode implements Loggable {
                     "metadata on the untyped tree leaves.");
 
     public Input<String> typeLabelInput = new Input<>("typeLabel",
-            "Type label used for traits in generated metadata.",
-            Input.Validate.REQUIRED);
+            "Type label used for traits in generated metadata.");
 
     public Input<Tree> treeInput = new Input<>("untypedTree",
             "Tree on which to apply mapping.",
