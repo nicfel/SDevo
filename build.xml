@@ -7,6 +7,8 @@
 
     <!-- Location to check for local copy of beast2 repository -->
     <property name="beastDir" location="../beast2"/>
+    <property name="primeDir" location="../BDMM-Prime" />
+
 
     <!-- BEAST 2 currently uses Java 1.8 -->
     <property name="sourceVersion" value="1.8"/>
@@ -15,6 +17,7 @@
     <!-- Directories necessary for all BEAST 2 packages -->
     <property name="doc" location="doc"/>
     <property name="examples" location="examples"/>
+    <property name="scripts" location="scripts"/>
     <property name="templates" location="templates"/>
 
     <!-- BEAST branch and version to build against
@@ -30,7 +33,7 @@
     <property name="test-reports" location="test-reports"/>
     <property name="dist" location="dist"/>
     <property name="pack" location="${dist}/package"/>
-    
+
     <!-- Prepare for compilation -->
     <target name="init">
 
@@ -51,7 +54,7 @@
         <mkdir dir="${build-lib}"/>
         <mkdir dir="${dist}"/>
 
-        <copy todir="${build-lib}" failonerror="false" quiet="true">
+        <copy todir="${build-lib}">
             <fileset dir="${lib}" includes="*.jar"/>
         </copy>
     </target>
@@ -61,6 +64,11 @@
     <target name="find-beast" depends="init">
         <available file="${beastDir}" property="localBeastAvailable"/>
     </target>
+    
+    <target name="find-prime" depends="init">
+        <available file="${primeDir}" property="localPrimeAvailable"/>
+    </target>
+
 
     <target name="build-remote-beast" depends="find-beast" unless="localBeastAvailable">
         <echo>No local copy of the beast2 source found at ${beastDir}.</echo>
@@ -109,11 +117,34 @@
 
         <delete dir="${build-beast}" />
     </target>
+    
+    <target name="build-local-prime" depends="find-prime" if="localPrimeAvailable">
+        <echo>Compiling against prime source found at ${primeDir}.</echo>
+
+        <property name="build-prime" location="build-prime"/>
+        <mkdir dir="${build-prime}"/>
+
+        <javac target="${targetVersion}" source="${sourceVersion}"
+            srcdir="${primeDir}/src"
+            destdir="${build-prime}" includeantruntime="true">
+            <classpath>
+                <pathelement path="${classpath}"/>
+                <fileset dir="${build-lib}" includes="*.jar"/>
+            </classpath>
+        </javac>
+        <jar jarfile="${build-lib}/prime.jar" basedir="${build-prime}" />
+        <copy todir="${build-lib}">
+            <fileset dir="${primeDir}/lib" includes="*.jar"/>
+        </copy>
+
+        <delete dir="${build-prime}" />
+    </target>
+
 
     <target name="build-beast" depends="build-local-beast,build-remote-beast"/>
 
     <!-- Compile -->
-    <target name="compile" depends="build-beast">
+    <target name="compile" depends="build-beast,build-local-prime">
         <javac target="${targetVersion}" source="${sourceVersion}" srcdir="${src}" destdir="${build}" includeantruntime="false">
             <classpath>
                 <pathelement path="${classpath}"/>
@@ -134,7 +165,6 @@
         <mkdir dir="${build-test}"/>
         <mkdir dir="${test-reports}"/>
     </target>
-
 
     <!-- Compile unit tests -->
     <target name="compile-test" depends="init-test,compile,copy-resources">
@@ -159,10 +189,10 @@
             </classpath>
             <batchtest fork="yes" todir="${test-reports}">
                 <fileset dir="${test}">
-                    <include name="**/*Test.java"/>
+                    <include name="**/*.java"/>
                 </fileset>
                 <formatter type="plain"/>
-                <!--formatter type="plain" usefile="false"/--> <!-- to screen -->
+                <formatter type="plain" usefile="false"/> <!-- to screen -->
             </batchtest>
         </junit>
 
@@ -176,6 +206,7 @@
 
         <mkdir dir="${pack}"/>
         <mkdir dir="${pack}/examples"/>
+        <mkdir dir="${pack}/scripts"/>
         <mkdir dir="${pack}/templates"/>
         <mkdir dir="${pack}/lib"/>
         <mkdir dir="${pack}/doc"/>
@@ -188,8 +219,7 @@
         </copy>
         <jar jarfile="${pack}/lib/${fullName}.jar" basedir="${build}" />
 
-        <copy file="README.md" tofile="${pack}/README" failonerror="false" quiet="true" />
-        <copy file="README.md" tofile="${pack}/README" failonerror="false" quiet="true" />
+        <copy file="README.md" tofile="${pack}/README" />
         <copy file="COPYING" todir="${pack}" />
         <copy todir="${pack}">
             <fileset dir="${lib}" includes="LICENSE*" />
@@ -199,7 +229,15 @@
         <copy todir="${pack}/examples">
             <fileset dir="${examples}" includes="**/*.xml" />
             <fileset dir="${examples}" includes="**/*.fasta" />
+            <fileset dir="${examples}" includes="**/*.nexus" />
+            <fileset dir="${examples}" includes="**/*.txt" />
         </copy>
+
+        <mkdir dir="${scripts}" />
+        <copy todir="${pack}/scripts">
+            <fileset dir="${scripts}" includes="**/*" />
+        </copy>
+
 
         <mkdir dir="${templates}" />
         <copy todir="${pack}/templates">
@@ -264,12 +302,12 @@
         <input addproperty="projName" defaultvalue="${defaultProjName}">Enter package name</input>
         <input addproperty="license" defaultvalue="gpl3" validargs="gpl3,lgpl3,lgpl2.1,apache2">Select open source software license</input>
         <input addproperty="projVersion" defaultvalue="1.0.0">Enter package version</input>
-        <input addproperty="beastVersionReq" defaultvalue="2.4.0">Enter minimum required BEAST 2 version</input>
+        <input addproperty="beastVersionReq" defaultvalue="2.1.0">Enter minimum required BEAST 2 version</input>
 
         <echo>Assembling files and directory structure...</echo>
 
         <echo file="version.xml">&lt;addon name="${projName}" version="${projVersion}"&gt;
-            &lt;depends on="BEAST" atleast="${beastVersionReq}"/&gt;
+            &lt;depends on="beast2" atleast="${beastVersionReq}"/&gt;
 
             &lt;!-- Add other dependencies as necessary. --&gt;
             &lt;/addon&gt;

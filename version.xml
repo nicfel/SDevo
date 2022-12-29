@@ -1,6 +1,7 @@
 <addon name="SDevo" version="0.0.1">
   <depends on="beast2" atleast="2.6.2"/>
-  <depends on="BDMM-Prime" atleast="0.0.12"/>
+  <depends on="BDMM-Prime" atleast="0.0.30"/>
+  <depends on="SA" atleast="2.0.2"/>
 
   <!-- Add other dependencies as necessary. -->
 </addon>
